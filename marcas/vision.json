@@ -1,0 +1,24 @@
+{
+ "nome": "Vision",
+ "slug": "vision",
+ "pasta_drive": "Cartas Contempladas",
+ "gerador": "gerador-cartas-vision.html",
+ "fone": "5535999999999",
+ "passo": 50,
+ "piso": 0,
+ "vip_min": 100000,
+ "agio_credito": 0,
+ "comissao_credito": 0,
+ "tema": {
+  "fundo": "#0B0B0C",
+  "superficie": "#141416",
+  "linha": "#1B1C20",
+  "texto": "#FDFDFD",
+  "texto2": "#C9CCD1",
+  "texto3": "#8E9298",
+  "acento": "#C9CCD1",
+  "claro": false
+ },
+ "consultor": "leonardo",
+ "_nota_margens": "Os valores reais vem dos Secrets AGIO_CREDITO e COMISSAO_CREDITO no GitHub. Zerado aqui de proposito: o repositorio e publico."
+}

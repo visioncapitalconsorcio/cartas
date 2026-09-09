@@ -1,0 +1,24 @@
+{
+ "nome": "Cred Cris",
+ "slug": "credcris",
+ "pasta_drive": "Cred Cris",
+ "gerador": "gerador-cartas-credcris.html",
+ "fone": "35 99915-6781",
+ "agio_credito": 0,
+ "passo": 50,
+ "piso": 0,
+ "vip_min": 100000,
+ "comissao_credito": 0,
+ "tema": {
+  "fundo": "#FFFFFF",
+  "superficie": "#F3F6F1",
+  "linha": "#E2E7DE",
+  "texto": "#0E1210",
+  "texto2": "#22302A",
+  "texto3": "#6E7D74",
+  "acento": "#007830",
+  "claro": true
+ },
+ "consultor": "gabriella",
+ "_nota_margens": "Os valores reais vem dos Secrets AGIO_CREDITO e COMISSAO_CREDITO no GitHub. Zerado aqui de proposito: o repositorio e publico."
+}

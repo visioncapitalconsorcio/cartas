@@ -1,0 +1,28 @@
+{
+ "nome": "Cartas Alê Consórcio",
+ "slug": "ale",
+ "pasta_drive": "Cartas Alê",
+ "gerador": "gerador-cartas-ale.html",
+ "fone": "5511912476544",
+ "passo": 50,
+ "piso": 0,
+ "vip_min": 100000,
+ "administradoras": [
+  "porto"
+ ],
+ "_nota_administradoras": "A Alê só comercializa cartas da Porto. O filtro casa por trecho do nome, então pega PORTO, PORTO AF e PORTO VP.",
+ "agio_credito": 0,
+ "comissao_credito": 0,
+ "tema": {
+  "fundo": "#0A1A4A",
+  "superficie": "#12245C",
+  "linha": "#1E3272",
+  "texto": "#FFFFFF",
+  "texto2": "#D2E0F7",
+  "texto3": "#9FB6E2",
+  "acento": "#5FA4F6",
+  "claro": false
+ },
+ "consultor": "joao",
+ "_nota_margens": "Os valores reais vem dos Secrets AGIO_CREDITO e COMISSAO_CREDITO no GitHub. Zerado aqui de proposito: o repositorio e publico."
+}

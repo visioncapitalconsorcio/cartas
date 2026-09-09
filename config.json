@@ -1,0 +1,59 @@
+{
+ "marca": "Vision",
+ "instagram": "_visioncapital__",
+ "endereco": "Av. dos Expedicionários, 61 — sala 201, Centro, Passos/MG",
+ "cnpj": "61.507.905/0001-47",
+ "horario": "Segunda a sexta, das 6h às 20h",
+ "faq": [
+  {
+   "p": "O que é uma carta contemplada?",
+   "r": "É uma cota de consórcio que já foi sorteada ou teve o lance aceito, ou seja, o crédito já está liberado. Quem compra a cota assume o saldo devedor e usa o crédito sem esperar novo sorteio."
+  },
+  {
+   "p": "O que exatamente eu pago?",
+   "r": "A entrada, que quita a posição do atual titular, e as parcelas que faltam do plano. A página mostra os dois valores e o custo total."
+  },
+  {
+   "p": "Como funciona a transferência da cota?",
+   "r": "A transferência é feita junto à administradora do consórcio, que analisa o cadastro do novo titular. Cada administradora tem o próprio prazo e os próprios critérios."
+  },
+  {
+   "p": "Em quanto tempo o crédito fica disponível?",
+   "r": "Depende da aprovação do cadastro pela administradora e da liberação da carta. Confirmamos o prazo da cota específica antes do fechamento."
+  },
+  {
+   "p": "Posso usar o crédito em qualquer bem?",
+   "r": "O crédito é usado dentro do segmento da cota — imóvel ou veículo. As regras de uso são as da administradora do plano."
+  }
+ ],
+ "aviso_faq": "Revise estas respostas: elas descrevem o funcionamento geral e você é quem conhece as regras de cada administradora.",
+ "equipe": [
+  {
+   "nome": "Leonardo Leandro",
+   "fone": "35997227537"
+  },
+  {
+   "nome": "João Enryque",
+   "fone": "35999904347"
+  },
+  {
+   "nome": "Gabriella Andrade",
+   "fone": "35984297375"
+  }
+ ],
+ "consultores": {
+  "leonardo": {
+   "nome": "Leonardo Leandro",
+   "fone": "35997227537"
+  },
+  "joao": {
+   "nome": "João Enryque",
+   "fone": "35999904347"
+  },
+  "gabriella": {
+   "nome": "Gabriella Andrade",
+   "fone": "35984297375"
+  }
+ },
+ "consultor_padrao": "leonardo"
+}
