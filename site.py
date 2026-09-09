@@ -338,7 +338,12 @@ CSS = """
     color:#fff;display:grid;place-items:center;flex:none;text-decoration:none}
   .zap:hover{background:var(--zap-esc)}
   .zap svg{width:19px;height:19px}
-  .oculto{visibility:hidden}
+  /* Modo cliente: some com tudo que fala de comissão, não só com os valores.
+     Escondendo só os números, o cabeçalho continuava dizendo "SUA COMISSÃO"
+     em cima de uma coluna vazia — para o cliente ao lado, isso entrega o
+     mesmo que o número. Some a coluna inteira, e a grade se refaz sem ela. */
+  body.cliente [data-com]{display:none}
+  body.cliente{--grade:170px 128px 1fr 1fr 68px 1fr 1fr 132px}
   #vazio{display:none;background:var(--papel);border:1px solid var(--linha);
     border-radius:14px;padding:46px 26px;text-align:center;color:var(--t3)}
   #vazio b{display:block;color:var(--t1);font-size:16px;margin-bottom:6px}
@@ -567,6 +572,7 @@ function contadores() {
 }
 
 function render() {
+  aplicarModo();   /* antes de filtrar: pode trocar a ordenação escolhida */
   const r = filtrar();
   lista.innerHTML = r.map(linha).join('');
   conta.textContent = r.length + (r.length === 1 ? ' carta' : ' cartas');
@@ -574,16 +580,26 @@ function render() {
   etiquetas();
   contadores();
   contarFiltros();
-  aplicarModo();
 }
 
 /* ---------- modo cliente ---------- */
+/* Vale para a tela toda enquanto o parceiro procura junto com o cliente:
+   coluna de comissão, linha da comissão no detalhe, o rótulo do cabeçalho e
+   a ordenação "maior comissão" no menu. Se essa ordenação estiver escolhida
+   na hora de ligar o modo, ela é trocada — o próprio menu diria em voz alta
+   que a lista está ordenada por comissão. */
 try { modoEl.checked = localStorage.getItem('modoCliente') === '1'; } catch (e) {}
+const optComissao = ordemEl.querySelector('option[value="comissao"]');
 function aplicarModo() {
-  document.querySelectorAll('[data-com]').forEach(el =>
-    el.classList.toggle('oculto', modoEl.checked));
-  try { localStorage.setItem('modoCliente', modoEl.checked ? '1' : '0'); }
-  catch (e) {}
+  const c = modoEl.checked;
+  document.body.classList.toggle('cliente', c);
+  if (c && ordemEl.value === 'comissao') ordemEl.value = 'peso';
+  /* A opção sai do DOM, não fica só com hidden: o Safari do iPhone ignora
+     hidden em <option>, e mesmo no Chrome o texto continuava aparecendo na
+     leitura da página. Sair e voltar é o único jeito que vale nos dois. */
+  if (c) optComissao.remove();
+  else if (!optComissao.parentNode) ordemEl.appendChild(optComissao);
+  try { localStorage.setItem('modoCliente', c ? '1' : '0'); } catch (e) {}
 }
 
 /* ---------- detalhe ---------- */
@@ -672,8 +688,7 @@ function abrir(cod) {
   };
   dlg.querySelectorAll('.sem').forEach(b =>
     b.onclick = () => { dlg.close(); abrir(b.dataset.cod); });
-  aplicarModo();
-  dlg.showModal();
+  dlg.showModal();   /* o modo cliente já vem da classe no body */
 }
 
 /* ---------- eventos ---------- */
@@ -726,7 +741,7 @@ document.querySelectorAll('.faixa').forEach(b => b.onclick = () => {
 qEl.addEventListener('input', () => { F.q = qEl.value.trim().toLowerCase();
   render(); });
 ordemEl.addEventListener('change', render);
-modoEl.addEventListener('change', aplicarModo);
+modoEl.addEventListener('change', render);
 
 ativosEl.addEventListener('click', e => {
   const t = e.target.closest('[data-tira]');
@@ -894,8 +909,7 @@ def pagina(cartas, cfg, segmentos, quando, equipe):
 <div class="conta-bar">
   <b id="conta"></b>
   <div class="ativos" id="ativos"></div>
-  <label class="modo"><input type="checkbox" id="modo">
-    Modo cliente — esconde a comissão</label>
+  <label class="modo"><input type="checkbox" id="modo">Modo cliente</label>
 </div>
 
 <main>
@@ -904,7 +918,8 @@ def pagina(cartas, cfg, segmentos, quando, equipe):
       <span>Segmento</span><span>Administradora</span>
       <span class="dir">Valor do crédito</span><span class="dir">Entrada</span>
       <span class="dir">Parcelas</span><span class="dir">Valor das parcelas</span>
-      <span class="dir">Custo total</span><span class="dir">Sua comissão</span>
+      <span class="dir">Custo total</span>
+      <span class="dir" data-com>Sua comissão</span>
       <span></span>
     </div>
     <ul id="lista"></ul>
