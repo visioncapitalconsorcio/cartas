@@ -113,23 +113,721 @@ def equipe_de(cfg):
             for c in (cfg.get("consultores") or {}).values() if c.get("_fone")]
 
 
+# ---------------------------------------------------------------- aparência
+# As administradoras entram como selo colorido com o nome escrito, não como
+# logotipo. Reproduzir a marca de terceiro numa página comercial sugeriria
+# um credenciamento que a Vision não tem com cada uma delas, e as artes não
+# são nossas para distribuir. A cor da casa dá o reconhecimento imediato que
+# o Leonardo queria, sem se apropriar de nada.
+CORES_ADM = {
+    "PORTO": "#0B3B8F", "PORTO AF": "#0B3B8F", "PORTO VP": "#0B3B8F",
+    "ITAU": "#D96A00", "BRADESCO": "#B00A28", "SANTANDER": "#C8102E",
+    "CAIXA": "#0B6BA8", "BCO BRASIL": "#0B3D91", "SICREDI": "#3B8A2E",
+    "SICOOB": "#0A5B54", "UNICOOB": "#1C7A46", "YAMAHA": "#B8121B",
+    "VOLKS": "#0B2354", "EMBRACON": "#B3161F", "CNP": "#1A5BA0",
+    "SERVOPA": "#A81733", "RODOBENS": "#0F7FA8", "MAGALU": "#0B6BD1",
+    "CANOPUS": "#C05B12", "H S": "#5B2A86",
+}
+PALETA_RESERVA = ["#3F4A57", "#6B4A7A", "#2F6B5E", "#7A5230", "#4A5A8C"]
+
+
+def cor_adm(nome):
+    n = (nome or "").strip().upper()
+    if n in CORES_ADM:
+        return CORES_ADM[n]
+    return PALETA_RESERVA[sum(map(ord, n)) % len(PALETA_RESERVA)]
+
+
+# Ícones desenhados aqui, em SVG, e não buscados de CDN: a página precisa
+# abrir inteira sem depender de rede de terceiro.
+ICONE_SEG = {
+    "imovel": ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+               'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+               '<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/>'
+               '<path d="M9.8 20v-5.4h4.4V20"/></svg>'),
+    "veiculo": ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+                '<path d="M4 16.5v2.2h2.6v-2.2"/><path d="M17.4 16.5v2.2H20v-2.2"/>'
+                '<path d="M3 16.5v-4l1.9-4.4A2 2 0 0 1 6.7 7h10.6a2 2 0 0 1 1.8 1.1'
+                'L21 12.5v4z"/><path d="M4.6 12.4h14.8"/><circle cx="7.3" cy="14.6" '
+                'r=".9"/><circle cx="16.7" cy="14.6" r=".9"/></svg>'),
+    "maquinario": ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                   'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+                   '<circle cx="7" cy="16.5" r="3.5"/><circle cx="17.5" cy="17.5" '
+                   'r="2.5"/><path d="M7 13V7h5l2.4 5.5"/><path d="M12 7h4l1.5 8"/>'
+                   '</svg>'),
+}
+ZAP_SVG = ('<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+           '<path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 '
+           '4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 '
+           '9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 '
+           '18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 '
+           '8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.18 8.18 0 0 1 5.82 '
+           '2.42 8.18 8.18 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.23 8.23zm4.52-6.16c-.25-.12'
+           '-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.79.97-.14.16-.29.18'
+           '-.54.06-.25-.13-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01'
+           '-.38.11-.5.11-.11.25-.29.37-.44.12-.14.16-.25.25-.41.08-.17.04-.31-.02-.43'
+           '-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43l-.47-.01c-.17 0-.43.06-.66'
+           '.31s-.86.85-.86 2.07.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05'
+           '.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14'
+           '-1.18-.06-.11-.22-.17-.47-.29z"/></svg>')
+
+
+# O CSS e o JS ficam em texto puro, fora de f-string. Numa f-string cada
+# chave de CSS e cada bloco de JS teria de ser duplicado, e uma chave
+# esquecida no meio de 400 linhas quebra a página inteira sem avisar.
+CSS = """
+  :root{
+    --tinta:#0B0B0C;      /* preto do cabeçalho e do rodapé */
+    --papel:#FFFFFF;
+    --nevoa:#F4F4F5;      /* fundo da página, atrás dos cartões */
+    --linha:#E5E5E8;
+    --linha2:#EFEFF1;
+    --t1:#101013;
+    --t2:#4B4B53;
+    --t3:#82828C;
+    --zap:#25D366;
+    --zap-esc:#128C4B;
+    --sans:'Geist','Inter',system-ui,-apple-system,sans-serif;
+    --mono:'Geist Mono','IBM Plex Mono',ui-monospace,monospace;
+    --grade:170px 128px 1fr 1fr 68px 1fr 1fr 118px 132px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--nevoa);color:var(--t1);font-family:var(--sans);
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit;color:inherit}
+  button{cursor:pointer;background:none;border:0}
+
+  /* ---------- cabeçalho preto ---------- */
+  header.barra{background:var(--tinta);color:#fff}
+  .barra-in{max-width:1360px;margin:0 auto;padding:20px 26px;
+    display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+  .barra-in img{height:40px;width:auto;display:block}
+  .barra-in h1{font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .barra-in .sub{font-family:var(--mono);font-size:10px;letter-spacing:.22em;
+    text-transform:uppercase;color:#8E9096;margin-top:3px}
+  .quando{margin-left:auto;text-align:right;font-family:var(--mono);
+    font-size:11px;letter-spacing:.1em;color:#8E9096;line-height:1.7}
+  .quando b{display:block;color:#fff;font-weight:500;letter-spacing:.06em}
+
+  /* ---------- filtros ---------- */
+  .filtros{background:var(--papel);border-bottom:1px solid var(--linha);
+    position:sticky;top:0;z-index:30}
+  .filtros-in{max-width:1360px;margin:0 auto;padding:16px 26px 14px;
+    display:flex;flex-direction:column;gap:12px}
+  .fl{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+  .rot{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--t3);margin-right:2px}
+  .pill{border:1px solid var(--linha);background:var(--papel);border-radius:999px;
+    padding:8px 15px;font-size:14px;color:var(--t2);display:flex;gap:7px;
+    align-items:center;transition:.13s}
+  .pill:hover{border-color:#C9C9CF}
+  .pill.on{background:var(--tinta);border-color:var(--tinta);color:#fff}
+  .pill .n{font-family:var(--mono);font-size:11px;opacity:.6}
+  .pill svg{width:16px;height:16px}
+  .campo{display:flex;align-items:center;gap:8px;border:1px solid var(--linha);
+    border-radius:999px;padding:7px 15px;background:var(--papel)}
+  .campo span{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--t3);white-space:nowrap}
+  .campo input{border:0;outline:0;background:none;width:86px;font-size:14px;
+    font-variant-numeric:tabular-nums}
+  input[type=search]{border:1px solid var(--linha);border-radius:999px;
+    padding:8px 16px;background:var(--papel);outline:0;min-width:230px;flex:1;
+    max-width:330px}
+  input[type=search]:focus,.campo:focus-within{border-color:var(--tinta)}
+  select{border:1px solid var(--linha);border-radius:999px;padding:8px 34px 8px 15px;
+    background:var(--papel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' stroke='%2382828C' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 13px center/12px;
+    appearance:none;outline:0;color:var(--t2);max-width:280px}
+  .limpar{color:var(--t3);font-size:13.5px;text-decoration:underline;
+    text-underline-offset:3px}
+  .limpar:hover{color:var(--t1)}
+  .marca-f{border:1px solid var(--linha);border-radius:999px;padding:5px 12px;
+    font-size:12.5px;color:var(--t2);display:flex;gap:6px;align-items:center}
+  /* [hidden] sozinho não vence o display:flex acima — sem esta linha as 20
+     administradoras aparecem todas de uma vez e o "todas" não serve de nada. */
+  .marca-f[hidden]{display:none}
+  .marca-f i{width:8px;height:8px;border-radius:99px;display:block;flex:none}
+  .marca-f.on{border-color:var(--tinta);background:var(--tinta);color:#fff}
+  .mais-marcas{font-size:12.5px;color:var(--t3);text-decoration:underline;
+    text-underline-offset:3px}
+  .btn-filtros{display:none;border:1px solid var(--tinta);border-radius:999px;
+    padding:8px 16px;font-size:14px;font-weight:500;gap:7px;align-items:center}
+  .btn-filtros .n2{font-family:var(--mono);font-size:11px;background:var(--tinta);
+    color:#fff;border-radius:99px;padding:1px 6px}
+  /* No celular a barra de filtros inteira ocupava a tela toda e empurrava as
+     cartas para fora da primeira dobra. Segmento e busca ficam à vista; o
+     resto abre no botão. E ela deixa de ser fixa: presa no topo, um bloco
+     desse tamanho não sobraria espaço para a lista. */
+  @media (max-width:820px){
+    .filtros{position:static}
+    .filtros-in{padding:14px 18px}
+    .fl.secundaria{display:none}
+    .filtros.aberto .fl.secundaria{display:flex}
+    .btn-filtros{display:flex}
+    .rot{width:100%}
+    /* flex:1 no meio de uma linha apertada espremia a busca até virar "Bu".
+       No celular ela toma a linha inteira. */
+    input[type=search]{flex:1 1 100%;max-width:none;min-width:0}
+    select{flex:1}
+    .conta-bar{padding:16px 18px 10px}
+    main{padding:0 18px 44px}
+    section.faq,.pe{padding-left:18px;padding-right:18px}
+    .barra-in{padding:16px 18px}
+  }
+
+  /* ---------- barra de contagem ---------- */
+  .conta-bar{max-width:1360px;margin:0 auto;padding:20px 26px 12px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .conta-bar b{font-family:var(--mono);font-size:12.5px;letter-spacing:.1em;
+    color:var(--t2);font-weight:500}
+  .ativos{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{background:var(--papel);border:1px solid var(--linha);border-radius:999px;
+    padding:4px 8px 4px 11px;font-size:12.5px;color:var(--t2);display:flex;
+    gap:6px;align-items:center}
+  .tag em{font-style:normal;color:var(--t3);font-size:15px;line-height:1;
+    padding:0 3px}
+  .tag:hover em{color:var(--t1)}
+  .modo{margin-left:auto;display:flex;align-items:center;gap:9px;
+    font-size:13.5px;color:var(--t2);cursor:pointer;user-select:none}
+  .modo input{appearance:none;width:38px;height:22px;border-radius:99px;
+    background:#D9D9DE;position:relative;cursor:pointer;transition:.16s;flex:none}
+  .modo input:checked{background:var(--tinta)}
+  .modo input::after{content:"";position:absolute;top:3px;left:3px;width:16px;
+    height:16px;border-radius:99px;background:#fff;transition:.16s}
+  .modo input:checked::after{transform:translateX(16px)}
+
+  /* ---------- tabela ---------- */
+  main{max-width:1360px;margin:0 auto;padding:0 26px 60px}
+  .quadro{background:var(--papel);border:1px solid var(--linha);
+    border-radius:14px;overflow:hidden}
+  .cab{display:grid;grid-template-columns:var(--grade);gap:16px;
+    padding:13px 20px;border-bottom:1px solid var(--linha);background:#FAFAFB}
+  .cab span{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--t3)}
+  .cab .dir,.linha-c .dir{text-align:right}
+  ul{list-style:none}
+  .linha-c{display:grid;grid-template-columns:var(--grade);gap:16px;
+    padding:15px 20px;border-bottom:1px solid var(--linha2);align-items:center;
+    width:100%;text-align:left;transition:background .12s}
+  .linha-c:last-child{border-bottom:0}
+  .linha-c:hover{background:#FBFBFC}
+  .seg{display:flex;align-items:center;gap:10px;min-width:0}
+  .seg-ic{width:34px;height:34px;border-radius:9px;background:var(--nevoa);
+    display:grid;place-items:center;color:var(--t2);flex:none}
+  .seg-ic svg{width:19px;height:19px}
+  .seg-txt{min-width:0}
+  .seg-txt b{display:block;font-size:13.5px;font-weight:500;color:var(--t1)}
+  .seg-txt span{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
+    color:var(--t3)}
+  .selo{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;
+    font-weight:500;color:var(--t1);min-width:0}
+  .selo i{width:9px;height:9px;border-radius:99px;flex:none}
+  .selo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .val{font-size:15.5px;font-variant-numeric:tabular-nums;color:var(--t1)}
+  .val.forte{font-weight:600}
+  .sub2{display:block;font-size:11.5px;color:var(--t3);
+    font-variant-numeric:tabular-nums;margin-top:1px}
+  .parc-n{font-family:var(--mono);font-size:15px;color:var(--t1)}
+  .escada{display:inline-block;font-size:11px;color:#8A5A00;background:#FFF4DB;
+    border-radius:5px;padding:1px 6px;margin-top:2px}
+  .acao{display:flex;gap:7px;justify-content:flex-end}
+  .ver{border:1px solid var(--linha);border-radius:8px;padding:8px 13px;
+    font-size:13px;color:var(--t2);white-space:nowrap}
+  .linha-c:hover .ver{border-color:var(--tinta);color:var(--t1)}
+  .zap{width:36px;height:36px;border-radius:8px;background:var(--zap);
+    color:#fff;display:grid;place-items:center;flex:none;text-decoration:none}
+  .zap:hover{background:var(--zap-esc)}
+  .zap svg{width:19px;height:19px}
+  .oculto{visibility:hidden}
+  #vazio{display:none;background:var(--papel);border:1px solid var(--linha);
+    border-radius:14px;padding:46px 26px;text-align:center;color:var(--t3)}
+  #vazio b{display:block;color:var(--t1);font-size:16px;margin-bottom:6px}
+
+  /* ---------- celular: a tabela vira cartão ---------- */
+  @media (max-width:1080px){
+    .cab{display:none}
+    .quadro{background:none;border:0;border-radius:0}
+    ul{display:grid;gap:11px}
+    .linha-c{grid-template-columns:1fr 1fr;gap:12px 16px;background:var(--papel);
+      border:1px solid var(--linha);border-radius:12px;padding:15px 16px}
+    .linha-c:last-child{border-bottom:1px solid var(--linha)}
+    .seg,.acao{grid-column:1/-1}
+    .acao .ver{flex:1;text-align:center}
+    .linha-c .dir{text-align:left}
+    .cel-k{display:block;font-family:var(--mono);font-size:9px;
+      letter-spacing:.16em;text-transform:uppercase;color:var(--t3);
+      margin-bottom:2px}
+  }
+  @media (min-width:1081px){ .cel-k{display:none} }
+
+  /* ---------- detalhe ---------- */
+  dialog{margin:auto;border:1px solid var(--linha);background:var(--papel);
+    color:var(--t1);border-radius:16px;padding:0;width:min(620px,94vw);
+    max-height:92vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.22)}
+  dialog::backdrop{background:rgba(10,10,12,.5)}
+  .d-top{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+    padding:17px 22px 15px;border-bottom:1px solid var(--linha);
+    position:sticky;top:0;background:var(--papel);z-index:2}
+  .d-cod{font-family:var(--mono);font-size:15px;letter-spacing:.08em}
+  .d-fechar{margin-left:auto;border:1px solid var(--linha);border-radius:8px;
+    padding:7px 13px;font-size:13px;color:var(--t2)}
+  .d-fechar:hover{border-color:var(--tinta);color:var(--t1)}
+  .d-corpo{padding:6px 22px}
+  .lin{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+    padding:11px 0;border-bottom:1px solid var(--linha2)}
+  .lin .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--t3)}
+  .lin .v{font-size:16px;font-variant-numeric:tabular-nums;text-align:right}
+  .lin.destaque{border-bottom:0;padding-top:14px}
+  .lin.destaque .v{font-size:23px;font-weight:600}
+  .regras{margin:12px 22px 4px;padding:15px 16px;background:var(--nevoa);
+    border-radius:10px}
+  .regras h3,.reservar h3,.semelhantes h3{font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--t3);
+    font-weight:500;margin-bottom:9px}
+  .regras pre{font-family:var(--sans);font-size:13.5px;line-height:1.6;
+    color:var(--t2);white-space:pre-wrap;word-break:break-word}
+  .aviso-taxa{margin-top:11px;padding-top:11px;border-top:1px solid var(--linha);
+    font-size:12.5px;color:var(--t3)}
+  .acoes{display:flex;gap:9px;padding:14px 22px 6px}
+  .acoes button{flex:1;border:1px solid var(--tinta);background:var(--tinta);
+    color:#fff;border-radius:9px;padding:12px;font-weight:600}
+  .reservar{padding:14px 22px 18px}
+  .reservar p{font-size:13.5px;color:var(--t2);margin-bottom:11px}
+  .cons{display:flex;flex-wrap:wrap;gap:9px}
+  .cons a{flex:1;min-width:152px;display:flex;align-items:center;gap:10px;
+    padding:11px 13px;border:1px solid var(--linha);border-radius:10px;
+    text-decoration:none;color:var(--t1);transition:.13s}
+  .cons a:hover{border-color:var(--zap);background:#F2FCF6}
+  .cons .ic{width:32px;height:32px;border-radius:8px;background:var(--zap);
+    color:#fff;display:grid;place-items:center;flex:none}
+  .cons .ic svg{width:18px;height:18px}
+  .cons b{font-size:13.5px;font-weight:600;display:block;line-height:1.25}
+  .cons em{font-style:normal;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+  .semelhantes{padding:0 22px 20px}
+  .sem{display:flex;justify-content:space-between;gap:14px;width:100%;
+    padding:11px 13px;margin-bottom:6px;font-size:13.5px;text-align:left;
+    border:1px solid var(--linha);border-radius:9px;color:var(--t2)}
+  .sem:hover{border-color:var(--tinta)}
+  .sem b{color:var(--t1);font-variant-numeric:tabular-nums}
+  .sem em{color:var(--t3);font-family:var(--mono);font-size:11px;
+    font-style:normal}
+
+  /* ---------- perguntas ---------- */
+  section.faq{max-width:1360px;margin:0 auto;padding:8px 26px 50px}
+  section.faq h2{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--t3);margin-bottom:12px}
+  details{border-bottom:1px solid var(--linha);background:var(--papel);
+    padding:0 16px}
+  details:first-of-type{border-radius:12px 12px 0 0;
+    border-top:1px solid var(--linha)}
+  details:last-of-type{border-radius:0 0 12px 12px}
+  summary{padding:14px 0;cursor:pointer;font-weight:500;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"+  ";color:var(--t3);font-family:var(--mono)}
+  details[open] summary::before{content:"\\2212  "}
+  details p{padding:0 0 15px;color:var(--t2);max-width:74ch;font-size:14.5px}
+
+  /* ---------- rodapé preto ---------- */
+  footer{background:var(--tinta);color:#B9BBC0}
+  .pe{max-width:1360px;margin:0 auto;padding:34px 26px 40px;display:grid;
+    gap:26px;grid-template-columns:1fr}
+  @media (min-width:820px){.pe{grid-template-columns:1.35fr 1fr 1fr}}
+  .plantao{grid-column:1/-1;background:#141416;border:1px solid #232327;
+    border-radius:12px;padding:18px 20px;display:flex;flex-wrap:wrap;
+    gap:14px 22px;align-items:center}
+  .plantao b{color:#fff;font-weight:600}
+  .plantao div{font-size:14px}
+  .plantao-zaps{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}
+  .plantao-zaps a{background:var(--zap);color:#fff;padding:10px 17px;
+    border-radius:8px;font-weight:600;text-decoration:none;white-space:nowrap;
+    display:flex;align-items:center;gap:8px;font-size:14px}
+  .plantao-zaps a:hover{background:var(--zap-esc)}
+  .plantao-zaps svg{width:17px;height:17px}
+  .bloco{display:flex;flex-direction:column;gap:7px;font-size:14px}
+  .bloco h2{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:#6E7076;font-weight:500;margin-bottom:4px}
+  .bloco a{color:#D6D7DA;text-decoration:none;width:fit-content;
+    display:flex;align-items:center;gap:8px}
+  .bloco a:hover{color:#fff;text-decoration:underline}
+  .bloco a svg{width:15px;height:15px;color:var(--zap);flex:none}
+  .nota{grid-column:1/-1;font-size:12.5px;color:#6E7076;max-width:86ch;
+    padding-top:8px;border-top:1px solid #232327}
+"""
+
+
+JS = r"""
+const CARTAS = __CARTAS__;
+const ROT    = __ROT__;
+const EQUIPE = __EQUIPE__;
+const CORES  = __CORES__;
+const ICONES = __ICONES__;
+const ZAP    = __ZAP__;
+
+const $ = s => document.querySelector(s);
+const lista = $('#lista'), vazio = $('#vazio'), conta = $('#conta');
+const deEl = $('#de'), ateEl = $('#ate'), qEl = $('#q');
+const ordemEl = $('#ordem'), modoEl = $('#modo'), ativosEl = $('#ativos');
+
+/* Estado dos filtros num objeto só: cada peça da interface lê e escreve
+   daqui, e as etiquetas de "filtro ativo" saem dele sem duplicar regra. */
+const F = { seg: '', adm: '', de: 0, ate: 0, q: '' };
+
+const brl  = n => n.toLocaleString('pt-BR',
+  {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const brl0 = n => n.toLocaleString('pt-BR', {maximumFractionDigits: 0});
+const esc  = s => String(s).replace(/[&<>"]/g,
+  m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const num  = v => { const d = String(v).replace(/\D/g, ''); return d ? +d : 0; };
+const corDe = a => CORES[a] || '#5A5A66';
+const icone = s => ICONES[s] || ICONES.imovel;
+
+/* ---------- filtro ---------- */
+/* Cada critério é uma função à parte para que os contadores possam medir
+   "quantas cartas sobram se eu ignorar este critério" — sem isso o número
+   ao lado de cada botão mentiria assim que outro filtro estivesse ligado. */
+const testes = {
+  seg: c => !F.seg || c.seg === F.seg,
+  adm: c => !F.adm || c.adm === F.adm,
+  faixa: c => (!F.de || c.credito >= F.de) && (!F.ate || c.credito <= F.ate),
+  q: c => !F.q || (c.cod + ' ' + c.adm).toLowerCase().includes(F.q),
+};
+const passa = (c, menos) => Object.keys(testes)
+  .every(k => k === menos || testes[k](c));
+
+function filtrar() {
+  const r = CARTAS.filter(c => passa(c));
+  const ord = {
+    peso: (a, b) => a.peso - b.peso,
+    credito: (a, b) => b.credito - a.credito,
+    'credito-asc': (a, b) => a.credito - b.credito,
+    entrada: (a, b) => a.entradaFinal - b.entradaFinal,
+    parcela: (a, b) => a.valorParcela - b.valorParcela,
+    comissao: (a, b) => b.comissao - a.comissao,
+  }[ordemEl.value];
+  return r.sort(ord);
+}
+
+/* ---------- linha da tabela ---------- */
+function linha(c) {
+  const valorParc = c.parc
+    ? '<span class="escada">escalonada</span>'
+    : '<span class="val">R$ ' + brl(c.valorParcela) + '</span>';
+  return '<li><button class="linha-c" data-cod="' + c.cod + '">' +
+    '<span class="seg"><span class="seg-ic">' + icone(c.seg) + '</span>' +
+      '<span class="seg-txt"><b>' + (ROT[c.seg] || c.seg) + '</b>' +
+      '<span>' + c.cod + '</span></span></span>' +
+    '<span class="selo"><i style="background:' + corDe(c.adm) + '"></i>' +
+      '<span>' + esc(c.adm) + '</span></span>' +
+    '<span class="dir"><span class="cel-k">Crédito</span>' +
+      '<span class="val forte">R$ ' + brl0(c.credito) + '</span></span>' +
+    '<span class="dir"><span class="cel-k">Entrada</span>' +
+      '<span class="val">R$ ' + brl0(c.entradaFinal) + '</span>' +
+      '<span class="sub2">' + Math.round(c.peso * 100) + '% do crédito</span></span>' +
+    '<span class="dir"><span class="cel-k">Parcelas</span>' +
+      '<span class="parc-n">' + c.parcelas + 'x</span></span>' +
+    '<span class="dir"><span class="cel-k">Valor das parcelas</span>' +
+      valorParc + '</span>' +
+    '<span class="dir"><span class="cel-k">Custo total</span>' +
+      '<span class="val">R$ ' + brl0(c.custoTotal) + '</span>' +
+      '<span class="sub2">+' + Math.round(c.acima * 100) + '% s/ crédito</span></span>' +
+    '<span class="dir" data-com><span class="cel-k">Sua comissão</span>' +
+      '<span class="val">R$ ' + brl0(c.comissao) + '</span></span>' +
+    '<span class="acao"><span class="ver">Ver carta</span>' +
+      '<span class="zap" data-zap="' + c.cod + '">' + ZAP + '</span></span>' +
+    '</button></li>';
+}
+
+/* ---------- etiquetas dos filtros ligados ---------- */
+function etiquetas() {
+  const t = [];
+  if (F.seg) t.push(['seg', ROT[F.seg] || F.seg]);
+  if (F.adm) t.push(['adm', F.adm]);
+  if (F.de || F.ate) t.push(['faixa',
+    (F.de ? 'de R$ ' + brl0(F.de) : 'até R$ ' + brl0(F.ate)) +
+    (F.de && F.ate ? ' a R$ ' + brl0(F.ate) : '')]);
+  if (F.q) t.push(['q', '"' + F.q + '"']);
+  ativosEl.innerHTML = t.map(([k, r]) =>
+    '<button class="tag" data-tira="' + k + '">' + esc(r) + '<em>&times;</em></button>'
+  ).join('');
+}
+
+function contadores() {
+  document.querySelectorAll('.pill[data-seg]').forEach(b => {
+    const v = b.dataset.seg;
+    b.querySelector('.n').textContent =
+      CARTAS.filter(c => (!v || c.seg === v) && passa(c, 'seg')).length;
+  });
+  document.querySelectorAll('.marca-f').forEach(b => {
+    const v = b.dataset.adm;
+    const n = CARTAS.filter(c => (!v || c.adm === v) && passa(c, 'adm')).length;
+    b.style.opacity = n ? 1 : .35;
+  });
+}
+
+function render() {
+  const r = filtrar();
+  lista.innerHTML = r.map(linha).join('');
+  conta.textContent = r.length + (r.length === 1 ? ' carta' : ' cartas');
+  vazio.style.display = r.length ? 'none' : 'block';
+  etiquetas();
+  contadores();
+  contarFiltros();
+  aplicarModo();
+}
+
+/* ---------- modo cliente ---------- */
+try { modoEl.checked = localStorage.getItem('modoCliente') === '1'; } catch (e) {}
+function aplicarModo() {
+  document.querySelectorAll('[data-com]').forEach(el =>
+    el.classList.toggle('oculto', modoEl.checked));
+  try { localStorage.setItem('modoCliente', modoEl.checked ? '1' : '0'); }
+  catch (e) {}
+}
+
+/* ---------- detalhe ---------- */
+const dlg = document.createElement('dialog');
+document.body.appendChild(dlg);
+
+const semelhantes = c => CARTAS
+  .filter(o => o.cod !== c.cod && o.seg === c.seg &&
+               Math.abs(o.credito - c.credito) / c.credito <= 0.25)
+  .sort((a, b) => Math.abs(a.credito - c.credito) -
+                  Math.abs(b.credito - c.credito))
+  .slice(0, 4);
+
+const textoReserva = c => 'Tenho interesse na carta ' + c.cod +
+  ' — crédito R$ ' + brl(c.credito) + '. Ela está disponível?';
+
+function mensagemCliente(c) {
+  const parc = c.parc || (c.parcelas + 'x de R$ ' + brl(c.valorParcela));
+  return '*Carta contemplada ' + c.cod + '* — ' + (ROT[c.seg] || c.seg) +
+    '\n\nCrédito: R$ ' + brl(c.credito) +
+    '\nEntrada: R$ ' + brl(c.entradaFinal) +
+    '\nParcelas: ' + parc +
+    '\nCusto total: R$ ' + brl(c.custoTotal) +
+    '\n\nA disponibilidade é confirmada na reserva. Me chame para garantir esta carta.';
+}
+
+function abrir(cod) {
+  const c = CARTAS.find(x => x.cod === cod);
+  if (!c) return;
+  const parc = c.parc || (c.parcelas + 'x de R$ ' + brl(c.valorParcela));
+  const sem = semelhantes(c);
+  dlg.innerHTML =
+    '<div class="d-top"><span class="seg-ic">' + icone(c.seg) + '</span>' +
+      '<span class="d-cod">' + c.cod + '</span>' +
+      '<span class="selo"><i style="background:' + corDe(c.adm) + '"></i>' +
+      '<span>' + esc(c.adm) + '</span></span>' +
+      '<button class="d-fechar" id="fechar">Fechar</button></div>' +
+    '<div class="d-corpo">' +
+      '<div class="lin"><span class="k">Crédito</span><span class="v">R$ ' +
+        brl(c.credito) + '</span></div>' +
+      '<div class="lin"><span class="k">Entrada</span><span class="v">R$ ' +
+        brl(c.entradaFinal) + '</span></div>' +
+      '<div class="lin"><span class="k">Parcelas</span><span class="v">' +
+        parc + '</span></div>' +
+      '<div class="lin"><span class="k">Total das parcelas</span>' +
+        '<span class="v">R$ ' + brl(c.parcelasTotal) + '</span></div>' +
+      '<div class="lin" data-com><span class="k">Sua comissão</span>' +
+        '<span class="v">R$ ' + brl(c.comissao) + '</span></div>' +
+      '<div class="lin destaque"><span class="k">Custo total do cliente</span>' +
+        '<span class="v">R$ ' + brl(c.custoTotal) + '<br><span class="k">+' +
+        Math.round(c.acima * 100) + '% sobre o crédito</span></span></div>' +
+    '</div>' +
+    '<div class="regras"><h3>Regras para uso desta carta</h3><pre>' +
+      (c.regras ? esc(c.regras)
+        : 'Regras não informadas para esta administradora. Confirme com a ' +
+          'Vision antes de fechar.') + '</pre>' +
+      (c.regras ? '<p class="aviso-taxa">A taxa de transferência é cobrada ' +
+        'pela administradora e <b>não está incluída no custo total ' +
+        'acima</b>.</p>' : '') + '</div>' +
+    '<div class="acoes">' +
+      '<button id="copiar">Copiar mensagem para o cliente</button></div>' +
+    '<div class="reservar"><h3>Reservar esta carta</h3>' +
+      '<p>Chame qualquer um dos três — todos atendem esta lista. A mensagem ' +
+      'já vai com o código da carta.</p>' +
+      '<div class="cons">' + EQUIPE.map(p =>
+        '<a href="https://wa.me/' + p.fone + '?text=' +
+        encodeURIComponent(textoReserva(c)) +
+        '" target="_blank" rel="noopener"><span class="ic">' + ZAP + '</span>' +
+        '<span><b>' + esc(p.nome) + '</b><em>WhatsApp</em></span></a>'
+      ).join('') + '</div></div>' +
+    '<div class="semelhantes"><h3>Cartas semelhantes</h3>' +
+      (sem.length ? sem.map(s =>
+        '<button class="sem" data-cod="' + s.cod + '">' +
+        '<span><b>R$ ' + brl0(s.credito) + '</b> · entrada R$ ' +
+        brl0(s.entradaFinal) + '</span><em>' + s.cod + '</em></button>').join('')
+       : '<p style="color:var(--t3);font-size:13.5px">Nenhuma carta parecida ' +
+         'hoje.</p>') + '</div>';
+  dlg.querySelector('#fechar').onclick = () => dlg.close();
+  dlg.querySelector('#copiar').onclick = async (e) => {
+    const b = e.currentTarget;
+    try {
+      await navigator.clipboard.writeText(mensagemCliente(c));
+      b.textContent = 'Mensagem copiada';
+    } catch (err) { b.textContent = 'Não consegui copiar'; }
+    setTimeout(() => b.textContent = 'Copiar mensagem para o cliente', 2200);
+  };
+  dlg.querySelectorAll('.sem').forEach(b =>
+    b.onclick = () => { dlg.close(); abrir(b.dataset.cod); });
+  aplicarModo();
+  dlg.showModal();
+}
+
+/* ---------- eventos ---------- */
+/* O ícone verde na linha abre o WhatsApp direto, sem passar pelo detalhe:
+   quem já conhece a carta não quer mais um clique no caminho. Fala com o
+   primeiro consultor da lista; para escolher outro, o detalhe traz os três. */
+lista.addEventListener('click', e => {
+  const z = e.target.closest('[data-zap]');
+  if (z && EQUIPE.length) {
+    e.stopPropagation();
+    const c = CARTAS.find(x => x.cod === z.dataset.zap);
+    window.open('https://wa.me/' + EQUIPE[0].fone + '?text=' +
+      encodeURIComponent(textoReserva(c)), '_blank', 'noopener');
+    return;
+  }
+  const b = e.target.closest('.linha-c');
+  if (b) abrir(b.dataset.cod);
+});
+
+document.querySelectorAll('.pill[data-seg]').forEach(b => b.onclick = () => {
+  F.seg = b.dataset.seg;
+  document.querySelectorAll('.pill[data-seg]').forEach(o =>
+    o.classList.toggle('on', o === b));
+  render();
+});
+document.querySelectorAll('.marca-f').forEach(b => b.onclick = () => {
+  F.adm = (F.adm === b.dataset.adm) ? '' : b.dataset.adm;
+  document.querySelectorAll('.marca-f').forEach(o =>
+    o.classList.toggle('on', o.dataset.adm === F.adm && F.adm));
+  render();
+});
+document.querySelectorAll('.faixa').forEach(b => b.onclick = () => {
+  const [de, ate] = b.dataset.faixa.split('-').map(Number);
+  const ligado = F.de === de && F.ate === ate;
+  F.de = ligado ? 0 : de;
+  F.ate = ligado ? 0 : ate;
+  deEl.value = F.de ? brl0(F.de) : '';
+  ateEl.value = F.ate ? brl0(F.ate) : '';
+  document.querySelectorAll('.faixa').forEach(o =>
+    o.classList.toggle('on', o === b && !ligado));
+  render();
+});
+[deEl, ateEl].forEach(el => el.addEventListener('input', () => {
+  const n = num(el.value);
+  el.value = n ? brl0(n) : '';
+  F[el.id] = n;
+  document.querySelectorAll('.faixa').forEach(o => o.classList.remove('on'));
+  render();
+}));
+qEl.addEventListener('input', () => { F.q = qEl.value.trim().toLowerCase();
+  render(); });
+ordemEl.addEventListener('change', render);
+modoEl.addEventListener('change', aplicarModo);
+
+ativosEl.addEventListener('click', e => {
+  const t = e.target.closest('[data-tira]');
+  if (!t) return;
+  const k = t.dataset.tira;
+  if (k === 'faixa') { F.de = F.ate = 0; deEl.value = ateEl.value = '';
+    document.querySelectorAll('.faixa').forEach(o => o.classList.remove('on')); }
+  else if (k === 'q') { F.q = ''; qEl.value = ''; }
+  else if (k === 'adm') { F.adm = '';
+    document.querySelectorAll('.marca-f').forEach(o => o.classList.remove('on')); }
+  else { F.seg = '';
+    document.querySelectorAll('.pill[data-seg]').forEach(o =>
+      o.classList.toggle('on', !o.dataset.seg)); }
+  render();
+});
+
+$('#limpar').onclick = () => {
+  F.seg = F.adm = F.q = ''; F.de = F.ate = 0;
+  deEl.value = ateEl.value = qEl.value = '';
+  ordemEl.value = 'peso';
+  document.querySelectorAll('.marca-f,.faixa').forEach(o =>
+    o.classList.remove('on'));
+  document.querySelectorAll('.pill[data-seg]').forEach(o =>
+    o.classList.toggle('on', !o.dataset.seg));
+  render();
+};
+
+/* No celular os filtros secundários ficam recolhidos. O contador no botão
+   diz quantos estão ligados, senão o parceiro fecha o painel e esquece que
+   deixou um filtro preso — e conclui que a lista encolheu sozinha. */
+$('#btn-filtros').onclick = () => $('.filtros').classList.toggle('aberto');
+function contarFiltros() {
+  const n = (F.adm ? 1 : 0) + (F.de || F.ate ? 1 : 0);
+  const el = $('#n-filtros');
+  el.textContent = n;
+  el.hidden = !n;
+}
+
+$('#mais-marcas').onclick = (e) => {
+  const esconde = document.querySelectorAll('.marca-f.extra');
+  const abrindo = esconde[0].hidden;
+  esconde.forEach(o => o.hidden = !abrindo);
+  e.currentTarget.textContent = abrindo
+    ? 'mostrar menos' : 'todas as administradoras';
+};
+
+render();
+"""
+
+
+# Faixas de crédito prontas: o parceiro raramente sabe o número exato que o
+# cliente procura, mas sabe a ordem de grandeza. Os limites saem do que a
+# LuME publica de fato — carro popular, carro melhor, apartamento, casa.
+FAIXAS = [("0-60000", "Até 60 mil"), ("60000-120000", "60 a 120 mil"),
+          ("120000-250000", "120 a 250 mil"), ("250000-0", "Acima de 250 mil")]
+
+
 def pagina(cartas, cfg, segmentos, quando, equipe):
     insta = (cfg.get("instagram") or "").lstrip("@")
     faq = cfg.get("faq") or []
 
-    ops_seg = "".join(
-        f'<button class="fseg" data-v="{s}">{SEG_ROTULO.get(s, s.title())}</button>'
+    # As administradoras vêm do que existe hoje na lista, ordenadas por
+    # quantidade: as quatro maiores ficam à vista e o resto abre no "todas".
+    contagem = {}
+    for c in cartas:
+        contagem[c["adm"]] = contagem.get(c["adm"], 0) + 1
+    ordenadas = sorted(contagem, key=lambda a: (-contagem[a], a))
+
+    pills_seg = '<button class="pill on" data-seg="">Todas<span class="n"></span></button>'
+    pills_seg += "".join(
+        f'<button class="pill" data-seg="{s}">{ICONE_SEG.get(s, "")}'
+        f'{SEG_ROTULO.get(s, s.title())}<span class="n"></span></button>'
         for s in segmentos)
+
+    faixas_html = "".join(
+        f'<button class="pill faixa" data-faixa="{v}">{r}</button>'
+        for v, r in FAIXAS)
+
+    marcas_html = "".join(
+        f'<button class="marca-f{"" if i < 6 else " extra"}" data-adm="{html.escape(a)}"'
+        f'{"" if i < 6 else " hidden"}><i style="background:{cor_adm(a)}"></i>'
+        f'{html.escape(a)}</button>' for i, a in enumerate(ordenadas))
+
     faq_html = "".join(
         f'<details><summary>{html.escape(q["p"])}</summary>'
         f'<p>{html.escape(q["r"])}</p></details>' for q in faq)
 
     plantao_html = "".join(
         f'<a href="https://wa.me/{p["fone"]}" target="_blank" rel="noopener">'
-        f'{html.escape(p["nome"].split()[0])}</a>' for p in equipe)
+        f'{ZAP_SVG}{html.escape(p["nome"].split()[0])}</a>' for p in equipe)
     equipe_html = "".join(
         f'<a href="https://wa.me/{p["fone"]}" target="_blank" rel="noopener">'
-        f'{html.escape(p["nome"])} · WhatsApp</a>' for p in equipe)
+        f'{ZAP_SVG}{html.escape(p["nome"])}</a>' for p in equipe)
+
+    js = (JS.replace("__CARTAS__", dados_js(cartas))
+            .replace("__ROT__", json.dumps(SEG_ROTULO, ensure_ascii=False))
+            .replace("__EQUIPE__", json.dumps(equipe, ensure_ascii=False))
+            .replace("__CORES__", json.dumps(
+                {a: cor_adm(a) for a in contagem}, ensure_ascii=False))
+            .replace("__ICONES__", json.dumps(ICONE_SEG, ensure_ascii=False))
+            .replace("__ZAP__", json.dumps(ZAP_SVG)))
 
     return f'''<!DOCTYPE html>
 <html lang="pt-BR">
@@ -137,231 +835,91 @@ def pagina(cartas, cfg, segmentos, quando, equipe):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#0B0B0C">
 <title>Vision — Cartas contempladas disponíveis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
-<style>
-  :root{{
-    --void:#0B0B0C; --sup:#141416; --sup2:#191A1D; --linha:#1B1C20;
-    --s1:#FDFDFD; --s2:#C9CCD1; --s3:#9CA0A6; --s4:#6B6E72;
-    --sans:'Geist','Inter',system-ui,-apple-system,sans-serif;
-    --mono:'Geist Mono','IBM Plex Mono',ui-monospace,monospace;
-  }}
-  *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{background:var(--void);color:var(--s2);font-family:var(--sans);
-    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}}
-  .wrap{{max-width:1180px;margin:0 auto;padding:24px 18px 90px}}
-  a{{color:inherit}}
-  :focus-visible{{outline:2px solid var(--s2);outline-offset:2px}}
-
-  .topo{{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
-    padding-bottom:20px;border-bottom:1px solid var(--linha)}}
-  .topo img{{width:46px;height:auto;display:block}}
-  .topo h1{{font-size:20px;font-weight:600;letter-spacing:-.015em;
-    color:var(--s1);line-height:1.2}}
-  .topo .sub{{font-family:var(--mono);font-size:10px;letter-spacing:.24em;
-    text-transform:uppercase;color:var(--s4);margin-top:3px}}
-  .quando{{margin-left:auto;font-family:var(--mono);font-size:11px;
-    letter-spacing:.08em;color:var(--s4);text-align:right;line-height:1.5}}
-
-  .busca{{padding:22px 0 18px;border-bottom:1px solid var(--linha);
-    display:flex;flex-direction:column;gap:14px}}
-  .rot{{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--s4)}}
-  .linha-f{{display:flex;flex-wrap:wrap;gap:9px;align-items:center}}
-  button,select,input{{font-family:var(--sans);font-size:14px;color:var(--s2);
-    background:var(--sup);border:1px solid var(--linha);border-radius:8px;
-    padding:10px 15px;cursor:pointer}}
-  input{{cursor:text}}
-  button:hover,select:hover{{border-color:#33353B;color:var(--s1)}}
-  button.on{{background:var(--s1);border-color:var(--s1);color:var(--void);
-    font-weight:600}}
-  .campo{{display:flex;align-items:center;gap:9px;background:var(--sup);
-    border:1px solid var(--linha);border-radius:8px;padding:0 14px 0 15px}}
-  .campo span{{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--s4);white-space:nowrap}}
-  .campo input{{border:0;background:none;padding:10px 0;width:120px;
-    font-variant-numeric:tabular-nums}}
-  #q{{flex:1;min-width:200px}}
-
-  .barra2{{display:flex;flex-wrap:wrap;gap:14px;align-items:center;
-    padding:16px 0 0}}
-  .conta{{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
-    color:var(--s3)}}
-  .toggle{{margin-left:auto;display:flex;align-items:center;gap:9px;
-    font-size:13px;color:var(--s3);cursor:pointer;user-select:none}}
-  .toggle input{{appearance:none;width:38px;height:21px;border-radius:99px;
-    background:var(--sup);border:1px solid var(--linha);position:relative;
-    padding:0;transition:background .15s}}
-  .toggle input::after{{content:"";position:absolute;top:2px;left:2px;
-    width:15px;height:15px;border-radius:50%;background:var(--s3);
-    transition:transform .15s}}
-  .toggle input:checked{{background:var(--s1);border-color:var(--s1)}}
-  .toggle input:checked::after{{transform:translateX(17px);background:var(--void)}}
-
-  ul{{list-style:none;display:flex;flex-direction:column;gap:1px;
-    margin-top:14px;background:var(--linha);border:1px solid var(--linha);
-    border-radius:10px;overflow:hidden}}
-  li{{background:var(--void)}}
-  .carta{{display:grid;gap:12px 20px;padding:16px 18px;align-items:start;
-    grid-template-columns:1fr;width:100%;text-align:left;background:none;
-    border:0;border-radius:0}}
-  .carta:hover{{background:var(--sup2)}}
-  @media (min-width:900px){{
-    .carta{{grid-template-columns:152px 1fr 1fr .85fr 1fr .9fr}}
-  }}
-  .ident{{display:flex;flex-wrap:wrap;align-items:center;gap:8px}}
-  .cod{{font-family:var(--mono);font-size:13px;font-weight:500;
-    letter-spacing:.06em;color:var(--s1)}}
-  .chip{{font-family:var(--mono);font-size:9px;letter-spacing:.14em;
-    text-transform:uppercase;padding:3px 9px;border-radius:99px;
-    border:1px solid var(--linha);color:var(--s3);white-space:nowrap}}
-  .adm{{font-size:12px;color:var(--s4)}}
-  .col{{display:flex;flex-direction:column;gap:1px;min-width:0}}
-  .col .k{{font-family:var(--mono);font-size:9px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--s4)}}
-  .col b{{font-size:16px;font-weight:600;color:var(--s1);
-    font-variant-numeric:tabular-nums;letter-spacing:-.01em}}
-  .col .m{{font-size:11.5px;color:var(--s4);font-variant-numeric:tabular-nums}}
-  .col.total b{{font-size:17px}}
-  .oculto{{display:none !important}}
-  .vazio{{padding:46px 6px;color:var(--s3);text-align:center;display:none}}
-
-  dialog{{margin:auto;border:1px solid var(--linha);background:var(--sup);
-    color:var(--s2);border-radius:12px;padding:0;max-width:620px;
-    width:calc(100% - 32px);max-height:88vh;overflow:auto}}
-  dialog::backdrop{{background:rgba(0,0,0,.74)}}
-  .d-top{{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
-    padding:19px 22px 15px;border-bottom:1px solid var(--linha)}}
-  .d-top .cod{{font-size:16px}}
-  .d-fechar{{margin-left:auto;padding:7px 13px;font-size:13px}}
-  .d-corpo{{padding:16px 22px 4px}}
-  .lin{{display:flex;justify-content:space-between;align-items:baseline;
-    gap:16px;padding:11px 0;border-bottom:1px solid var(--linha)}}
-  .lin .k{{font-family:var(--mono);font-size:10px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--s4)}}
-  .lin .v{{font-size:16px;color:var(--s1);font-variant-numeric:tabular-nums;
-    text-align:right}}
-  .lin.destaque{{border-bottom:0}}
-  .lin.destaque .v{{font-size:21px;font-weight:600}}
-  .acoes{{display:flex;flex-wrap:wrap;gap:9px;padding:16px 22px 18px}}
-  .acoes button,.acoes a{{flex:1;min-width:172px;text-align:center;
-    text-decoration:none;padding:12px;font-weight:500}}
-  .acoes .primaria{{background:var(--s1);border-color:var(--s1);
-    color:var(--void);font-weight:600}}
-  .reservar{{padding:0 22px 18px}}
-  .reservar h3{{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--s4);font-weight:500;margin-bottom:7px}}
-  .reservar p{{font-size:13.5px;color:var(--s3);margin-bottom:11px}}
-  .reservar .cons{{display:flex;flex-wrap:wrap;gap:9px}}
-  .reservar .cons a{{flex:1;min-width:150px;display:flex;flex-direction:column;
-    gap:2px;align-items:center;padding:12px 10px;border:1px solid var(--linha);
-    border-radius:9px;background:var(--sup);text-decoration:none}}
-  .reservar .cons a:hover{{border-color:var(--s1)}}
-  .reservar .cons b{{color:var(--s1);font-size:14px;font-weight:600}}
-  .reservar .cons em{{font-family:var(--mono);font-size:10px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--s4);font-style:normal}}
-  .regras{{margin:14px 0 2px;padding:15px 16px;background:var(--void);
-    border:1px solid var(--linha);border-radius:9px}}
-  .regras h3{{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--s4);font-weight:500;margin-bottom:9px}}
-  .regras pre{{font-family:var(--sans);font-size:13.5px;line-height:1.6;
-    color:var(--s2);white-space:pre-wrap;word-break:break-word;margin:0}}
-  .aviso-taxa{{margin-top:11px;padding-top:11px;border-top:1px solid var(--linha);
-    font-size:12.5px;color:var(--s4)}}
-  .semelhantes{{padding:0 22px 20px}}
-  .semelhantes h3{{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--s4);font-weight:500;margin-bottom:9px}}
-  .sem{{display:flex;justify-content:space-between;gap:14px;width:100%;
-    padding:11px 13px;margin-bottom:6px;font-size:13.5px;text-align:left}}
-  .sem b{{color:var(--s1);font-variant-numeric:tabular-nums}}
-  .sem em{{color:var(--s4);font-family:var(--mono);font-size:11px;
-    font-style:normal}}
-
-  section.faq{{margin-top:46px;padding-top:26px;border-top:1px solid var(--linha)}}
-  section.faq h2,footer h2{{font-family:var(--mono);font-size:10px;
-    letter-spacing:.24em;text-transform:uppercase;color:var(--s4);
-    font-weight:500;margin-bottom:12px}}
-  details{{border-bottom:1px solid var(--linha)}}
-  summary{{padding:13px 0;cursor:pointer;color:var(--s1);font-weight:500;
-    list-style:none}}
-  summary::-webkit-details-marker{{display:none}}
-  summary::before{{content:"+  ";color:var(--s4);font-family:var(--mono)}}
-  details[open] summary::before{{content:"−  "}}
-  details p{{padding:0 0 15px;color:var(--s3);max-width:70ch;font-size:14.5px}}
-
-  footer{{margin-top:44px;padding-top:26px;border-top:1px solid var(--linha);
-    display:grid;gap:24px;grid-template-columns:1fr}}
-  @media (min-width:760px){{footer{{grid-template-columns:1.3fr 1fr 1fr}}}}
-  .plantao{{grid-column:1/-1;background:var(--sup);border:1px solid var(--linha);
-    border-radius:10px;padding:18px 20px;display:flex;flex-wrap:wrap;
-    gap:14px 22px;align-items:center}}
-  .plantao b{{color:var(--s1);font-weight:600}}
-  .plantao div{{font-size:14px;color:var(--s3)}}
-  .plantao-zaps{{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}}
-  .plantao-zaps a{{background:var(--s1);color:var(--void);
-    padding:11px 20px;border-radius:8px;font-weight:600;text-decoration:none;
-    white-space:nowrap}}
-  .bloco{{display:flex;flex-direction:column;gap:6px;font-size:14px;
-    color:var(--s3)}}
-  .bloco a{{color:var(--s2);text-decoration:none;width:fit-content}}
-  .bloco a:hover{{color:var(--s1);text-decoration:underline}}
-  .nota{{grid-column:1/-1;font-size:12.5px;color:var(--s4);max-width:82ch;
-    padding-top:6px}}
-</style>
+<style>{CSS}</style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="topo">
+<header class="barra">
+  <div class="barra-in">
     <img src="{logo_base64()}" alt="Vision">
     <div>
       <h1>Cartas contempladas</h1>
       <div class="sub">Área do parceiro · Vision</div>
     </div>
-    <div class="quando">Atualizado<br>{quando}</div>
+    <div class="quando">Atualizado<b>{quando}</b></div>
   </div>
+</header>
 
-  <div class="busca">
-    <div>
-      <div class="rot">O que o cliente procura</div>
-      <div class="linha-f" style="margin-top:10px">
-        <button class="fseg on" data-v="">Todos</button>
-        {ops_seg}
-        <div class="campo"><span>Crédito de aprox.</span>
-          <input id="alvo" type="text" inputmode="numeric" placeholder="30.000"></div>
-        <input id="q" type="search" placeholder="Buscar por código ou administradora">
-      </div>
+<div class="filtros">
+  <div class="filtros-in">
+    <div class="fl">
+      <span class="rot">Segmento</span>
+      {pills_seg}
+      <button class="btn-filtros" id="btn-filtros">Filtros
+        <span class="n2" id="n-filtros" hidden>0</span></button>
     </div>
-    <div class="linha-f">
+    <div class="fl secundaria">
+      <span class="rot">Crédito</span>
+      {faixas_html}
+      <div class="campo"><span>De</span>
+        <input id="de" type="text" inputmode="numeric" placeholder="mín."></div>
+      <div class="campo"><span>Até</span>
+        <input id="ate" type="text" inputmode="numeric" placeholder="máx."></div>
+    </div>
+    <div class="fl secundaria">
+      <span class="rot">Administradora</span>
+      {marcas_html}
+      <button class="mais-marcas" id="mais-marcas">todas as administradoras</button>
+    </div>
+    <div class="fl">
+      <input id="q" type="search" placeholder="Buscar por código ou administradora">
       <select id="ordem">
-        <option value="proximo">Mais próximo do valor procurado</option>
         <option value="peso">Menor entrada sobre o crédito</option>
+        <option value="entrada">Menor entrada</option>
+        <option value="parcela">Menor parcela</option>
         <option value="credito">Maior crédito</option>
         <option value="credito-asc">Menor crédito</option>
         <option value="comissao">Maior comissão</option>
       </select>
-      <button id="limpar">Limpar filtros</button>
+      <button class="limpar" id="limpar">Limpar filtros</button>
     </div>
   </div>
+</div>
 
-  <div class="barra2">
-    <span class="conta" id="conta"></span>
-    <label class="toggle"><input type="checkbox" id="modo">
-      Modo cliente — esconde a comissão</label>
+<div class="conta-bar">
+  <b id="conta"></b>
+  <div class="ativos" id="ativos"></div>
+  <label class="modo"><input type="checkbox" id="modo">
+    Modo cliente — esconde a comissão</label>
+</div>
+
+<main>
+  <div class="quadro">
+    <div class="cab">
+      <span>Segmento</span><span>Administradora</span>
+      <span class="dir">Valor do crédito</span><span class="dir">Entrada</span>
+      <span class="dir">Parcelas</span><span class="dir">Valor das parcelas</span>
+      <span class="dir">Custo total</span><span class="dir">Sua comissão</span>
+      <span></span>
+    </div>
+    <ul id="lista"></ul>
   </div>
+  <div id="vazio"><b>Nenhuma carta com esses filtros</b>
+    Tente outra faixa de crédito ou limpe os filtros.</div>
+</main>
 
-  <ul id="lista"></ul>
-  <p class="vazio" id="vazio">Nenhuma carta com esses filtros.<br>
-     Tente outro valor de crédito ou limpe os filtros.</p>
+<section class="faq">
+  <h2>Dúvidas frequentes</h2>
+  {faq_html}
+</section>
 
-  <section class="faq">
-    <h2>Dúvidas frequentes</h2>
-    {faq_html}
-  </section>
-
-  <footer>
+<footer>
+  <div class="pe">
     <div class="plantao">
       <div><b>Plantão de dúvidas</b><br>
         Dúvida sobre uma carta específica? Chame qualquer um dos três com o
@@ -385,208 +943,13 @@ def pagina(cartas, cfg, segmentos, quando, equipe):
     </div>
     <p class="nota">As cartas saem da lista ao longo do dia — a
       disponibilidade é confirmada no momento da reserva. O custo total é a
-      soma da entrada com todas as parcelas restantes da cota.</p>
-  </footer>
+      soma da entrada com todas as parcelas restantes da cota. As
+      administradoras aparecem identificadas pelo nome; a Vision não
+      representa nenhuma delas.</p>
+  </div>
+</footer>
 
-</div>
-
-<script>
-const CARTAS = {dados_js(cartas)};
-const ROT = {json.dumps(SEG_ROTULO, ensure_ascii=False)};
-const EQUIPE = {json.dumps(equipe, ensure_ascii=False)};
-const lista = document.getElementById('lista');
-const vazio = document.getElementById('vazio');
-const conta = document.getElementById('conta');
-const alvoEl = document.getElementById('alvo');
-const qEl = document.getElementById('q');
-const ordemEl = document.getElementById('ordem');
-const modoEl = document.getElementById('modo');
-let seg = '';
-
-const brl = n => n.toLocaleString('pt-BR',
-  {{minimumFractionDigits: 2, maximumFractionDigits: 2}});
-const brl0 = n => n.toLocaleString('pt-BR', {{maximumFractionDigits: 0}});
-const numAlvo = () => {{
-  const d = alvoEl.value.replace(/\\D/g, '');
-  return d ? parseInt(d, 10) : 0;
-}};
-const parcelasTexto = c =>
-  c.parc ? c.parcelas + 'x escalonadas' : c.parcelas + 'x R$ ' + brl(c.valorParcela);
-
-/* O interruptor fica lembrado: o parceiro não reativa a cada visita. */
-try {{ modoEl.checked = localStorage.getItem('modoCliente') === '1'; }} catch (e) {{}}
-function aplicarModo() {{
-  document.querySelectorAll('[data-com]').forEach(el =>
-    el.classList.toggle('oculto', modoEl.checked));
-  try {{ localStorage.setItem('modoCliente', modoEl.checked ? '1' : '0'); }}
-  catch (e) {{}}
-}}
-
-function filtrar() {{
-  const alvo = numAlvo(), q = qEl.value.trim().toLowerCase();
-  const r = CARTAS.filter(c =>
-    (!seg || c.seg === seg) &&
-    (!q || (c.cod + ' ' + c.adm).toLowerCase().includes(q)) &&
-    (!alvo || Math.abs(c.credito - alvo) / alvo <= 0.30));
-  const ord = {{
-    proximo: (a, b) => alvo
-      ? Math.abs(a.credito - alvo) - Math.abs(b.credito - alvo)
-      : a.peso - b.peso,
-    peso: (a, b) => a.peso - b.peso,
-    credito: (a, b) => b.credito - a.credito,
-    'credito-asc': (a, b) => a.credito - b.credito,
-    comissao: (a, b) => b.comissao - a.comissao,
-  }}[ordemEl.value];
-  return r.sort(ord);
-}}
-
-function linha(c) {{
-  const detalhe = c.parc ? 'escalonadas' : 'R$ ' + brl(c.valorParcela);
-  return '<li><button class="carta" data-cod="' + c.cod + '">' +
-    '<span class="ident"><span class="cod">' + c.cod + '</span>' +
-      '<span class="chip">' + (ROT[c.seg] || c.seg) + '</span>' +
-      '<span class="adm">' + c.adm + '</span></span>' +
-    '<span class="col"><span class="k">Crédito</span><b>R$ ' +
-      brl(c.credito) + '</b></span>' +
-    '<span class="col"><span class="k">Entrada</span><b>R$ ' +
-      brl(c.entradaFinal) + '</b><span class="m">' +
-      Math.round(c.peso * 100) + '% do crédito</span></span>' +
-    '<span class="col"><span class="k">Parcelas</span><b>' + c.parcelas +
-      'x</b><span class="m">' + detalhe + '</span></span>' +
-    '<span class="col total"><span class="k">Custo total</span><b>R$ ' +
-      brl(c.custoTotal) + '</b><span class="m">+' +
-      Math.round(c.acima * 100) + '% sobre o crédito</span></span>' +
-    '<span class="col" data-com><span class="k">Sua comissão</span><b>R$ ' +
-      brl(c.comissao) + '</b></span></button></li>';
-}}
-
-function render() {{
-  const r = filtrar();
-  lista.innerHTML = r.map(linha).join('');
-  conta.textContent = r.length + (r.length === 1 ? ' carta' : ' cartas');
-  vazio.style.display = r.length ? 'none' : 'block';
-  aplicarModo();
-}}
-
-const dlg = document.createElement('dialog');
-document.body.appendChild(dlg);
-
-function semelhantes(c) {{
-  return CARTAS
-    .filter(o => o.cod !== c.cod && o.seg === c.seg &&
-                 Math.abs(o.credito - c.credito) / c.credito <= 0.25)
-    .sort((a, b) => Math.abs(a.credito - c.credito) -
-                    Math.abs(b.credito - c.credito))
-    .slice(0, 4);
-}}
-
-function mensagemCliente(c) {{
-  const parc = c.parc || (c.parcelas + 'x de R$ ' + brl(c.valorParcela));
-  return '*Carta contemplada ' + c.cod + '* — ' + (ROT[c.seg] || c.seg) +
-    '\\n\\nCrédito: R$ ' + brl(c.credito) +
-    '\\nEntrada: R$ ' + brl(c.entradaFinal) +
-    '\\nParcelas: ' + parc +
-    '\\nCusto total: R$ ' + brl(c.custoTotal) +
-    '\\n\\nA disponibilidade é confirmada na reserva. Me chame para garantir esta carta.';
-}}
-
-function abrir(cod) {{
-  const c = CARTAS.find(x => x.cod === cod);
-  if (!c) return;
-  const parc = c.parc || (c.parcelas + 'x de R$ ' + brl(c.valorParcela));
-  const sem = semelhantes(c);
-  dlg.innerHTML =
-    '<div class="d-top"><span class="cod">' + c.cod + '</span>' +
-      '<span class="chip">' + (ROT[c.seg] || c.seg) + '</span>' +
-      '<span class="adm">' + c.adm + '</span>' +
-      '<button class="d-fechar" id="fechar">Fechar</button></div>' +
-    '<div class="d-corpo">' +
-      '<div class="lin"><span class="k">Crédito</span><span class="v">R$ ' +
-        brl(c.credito) + '</span></div>' +
-      '<div class="lin"><span class="k">Entrada</span><span class="v">R$ ' +
-        brl(c.entradaFinal) + '</span></div>' +
-      '<div class="lin"><span class="k">Parcelas</span><span class="v">' +
-        parc + '</span></div>' +
-      '<div class="lin"><span class="k">Total das parcelas</span>' +
-        '<span class="v">R$ ' + brl(c.parcelasTotal) + '</span></div>' +
-      '<div class="lin" data-com><span class="k">Sua comissão</span>' +
-        '<span class="v">R$ ' + brl(c.comissao) + '</span></div>' +
-      '<div class="lin destaque"><span class="k">Custo total do cliente</span>' +
-        '<span class="v">R$ ' + brl(c.custoTotal) + '<br><span class="k">+' +
-        Math.round(c.acima * 100) + '% sobre o crédito</span></span></div>' +
-    '</div>' +
-    '<div style="padding:0 22px">' +
-      (c.regras
-        ? '<div class="regras"><h3>Regras para uso desta carta</h3><pre>' +
-          c.regras.replace(/[&<>]/g, m => ({{'&':'&amp;','<':'&lt;','>':'&gt;'}}[m])) +
-          '</pre><p class="aviso-taxa">A taxa de transferência é cobrada pela ' +
-          'administradora e <b>não está incluída no custo total acima</b>.</p></div>'
-        : '<div class="regras"><h3>Regras para uso desta carta</h3>' +
-          '<pre>Regras não informadas para esta administradora. ' +
-          'Confirme com a Vision antes de fechar.</pre></div>') +
-    '</div>' +
-    '<div class="acoes">' +
-      '<button class="primaria" id="copiar">Copiar mensagem para o cliente</button>' +
-    '</div>' +
-    '<div class="reservar"><h3>Reservar esta carta</h3>' +
-      '<p>Chame qualquer um dos três — todos atendem esta lista. A mensagem ' +
-      'já vai com o código da carta.</p>' +
-      '<div class="cons">' + EQUIPE.map(p =>
-        '<a href="https://wa.me/' + p.fone + '?text=' + encodeURIComponent(
-          'Tenho interesse na carta ' + c.cod + ' — crédito R$ ' +
-          brl(c.credito) + '. Ela está disponível?') +
-        '" target="_blank" rel="noopener"><b>' + p.nome +
-        '</b><em>WhatsApp</em></a>').join('') + '</div>' +
-    '</div>' +
-    '<div class="semelhantes"><h3>Cartas semelhantes</h3>' +
-      (sem.length ? sem.map(s =>
-        '<button class="sem" data-cod="' + s.cod + '">' +
-        '<span><b>R$ ' + brl0(s.credito) + '</b> · entrada R$ ' +
-        brl0(s.entradaFinal) + '</span><em>' + s.cod + '</em></button>').join('')
-       : '<p style="color:var(--s4);font-size:13.5px">Nenhuma carta parecida hoje.</p>') +
-    '</div>';
-  dlg.querySelector('#fechar').onclick = () => dlg.close();
-  dlg.querySelector('#copiar').onclick = async (e) => {{
-    const b = e.currentTarget;
-    try {{
-      await navigator.clipboard.writeText(mensagemCliente(c));
-      b.textContent = 'Mensagem copiada';
-    }} catch (err) {{ b.textContent = 'Não consegui copiar'; }}
-    setTimeout(() => b.textContent = 'Copiar mensagem para o cliente', 2200);
-  }};
-  dlg.querySelectorAll('.sem').forEach(b =>
-    b.onclick = () => {{ dlg.close(); abrir(b.dataset.cod); }});
-  aplicarModo();
-  dlg.showModal();
-}}
-
-lista.addEventListener('click', e => {{
-  const b = e.target.closest('.carta');
-  if (b) abrir(b.dataset.cod);
-}});
-document.querySelectorAll('.fseg').forEach(b => b.onclick = () => {{
-  document.querySelectorAll('.fseg').forEach(o => o.classList.remove('on'));
-  b.classList.add('on');
-  seg = b.dataset.v;
-  render();
-}});
-alvoEl.addEventListener('input', () => {{
-  const d = alvoEl.value.replace(/\\D/g, '');
-  alvoEl.value = d ? parseInt(d, 10).toLocaleString('pt-BR') : '';
-  render();
-}});
-qEl.addEventListener('input', render);
-ordemEl.addEventListener('change', render);
-modoEl.addEventListener('change', aplicarModo);
-document.getElementById('limpar').onclick = () => {{
-  alvoEl.value = ''; qEl.value = ''; ordemEl.value = 'proximo';
-  document.querySelectorAll('.fseg').forEach(o => o.classList.remove('on'));
-  document.querySelector('.fseg').classList.add('on');
-  seg = '';
-  render();
-}};
-render();
-</script>
+<script>{js}</script>
 </body>
 </html>'''
 
