@@ -350,11 +350,42 @@ def limpar_regras(texto):
     return "\n".join(l.strip() for l in t.split("\n") if l.strip()).strip()
 
 
-def baixar():
-    import urllib.request
-    req = urllib.request.Request(URL, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8", "replace")
+def baixar(tentativas=4):
+    """
+    Busca a tabela, com repetição em caso de falha de rede.
+
+    Em 09/09/2026 uma rodada morreu com
+    'CERTIFICATE_VERIFY_FAILED: Hostname mismatch, certificate is not valid
+    for cartascontempladas.com.br' — onze minutos depois de outra rodada ter
+    passado, e com o site abrindo normalmente no navegador. É um nó da rede
+    de distribuição da LuME servindo o certificado errado; cai em quem tem o
+    azar de bater nele. Repetir resolve, porque a próxima tentativa quase
+    sempre cai em outro nó.
+
+    O que NÃO se faz aqui é desligar a verificação do certificado. Seria a
+    correção de uma linha e destruiria a única garantia de que a tabela veio
+    mesmo da LuME e não de quem interceptou a conexão — e essa tabela vira
+    preço publicado para o parceiro.
+
+    Se todas as tentativas falharem, a exceção sobe e a rodada fica vermelha.
+    O site continua no ar com a última versão boa; melhor uma lista de meia
+    hora atrás do que uma página vazia.
+    """
+    import time, urllib.request
+    for n in range(1, tentativas + 1):
+        try:
+            req = urllib.request.Request(URL, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                if n > 1:
+                    print(f"  conseguiu na {n}ª tentativa")
+                return r.read().decode("utf-8", "replace")
+        except Exception as e:
+            if n == tentativas:
+                raise
+            espera = 5 * n
+            print(f"  tentativa {n} falhou ({e.__class__.__name__}: {e}); "
+                  f"repetindo em {espera}s")
+            time.sleep(espera)
 
 
 # ------------------------------------------------------------------ limpeza
