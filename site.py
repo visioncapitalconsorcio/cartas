@@ -47,10 +47,22 @@ def preparar(cotas, marca):
     COMISSAO_CREDITO. É o que permite manter as margens fora do código num
     repositório público: os números ficam em Secrets do GitHub e o JSON
     guarda só um valor de referência.
+
+    Os dois números não são independentes. O ágio é o que a Vision põe em
+    cima da entrada da LuME; a comissão do parceiro sai de dentro dele. Com
+    5% e 2%, sobram 3% para a casa. Se um dia a comissão for configurada
+    acima do ágio, a Vision estaria pagando para vender — e nada na página
+    acusaria, porque o ágio não aparece em lugar nenhum. Daí a trava.
     """
     agio = float(os.environ.get("AGIO_CREDITO") or marca.get("agio_credito", 0.05))
     com = float(os.environ.get("COMISSAO_CREDITO")
                 or marca.get("comissao_credito", 0.02))
+    if com >= agio:
+        raise SystemExit(
+            f"Comissão ({com:.1%}) igual ou maior que o ágio ({agio:.1%}). "
+            "A comissão do parceiro sai de dentro do ágio; assim a Vision "
+            "venderia no prejuízo. Corrija os Secrets AGIO_CREDITO e "
+            "COMISSAO_CREDITO antes de publicar.")
     passo, piso = marca.get("passo", 50), marca.get("piso", 0)
     admins = [a.lower() for a in marca.get("administradoras") or []]
 
@@ -589,6 +601,12 @@ def gerar(cotas, cfg, destino, quando):
     os.makedirs(os.path.dirname(destino) or ".", exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
         f.write(pagina(cartas, cfg, segmentos, quando, equipe))
+    # o log da rodada mostra as margens em vigor. Como o ágio não aparece na
+    # página, é aqui que dá para conferir se o Secret está no valor certo.
+    a = float(os.environ.get("AGIO_CREDITO") or 0.05)
+    k = float(os.environ.get("COMISSAO_CREDITO") or 0.02)
+    print(f"margens: ágio {a:.1%} do crédito na entrada · "
+          f"comissão do parceiro {k:.1%} · fica com a Vision {a - k:.1%}")
     print(f"Vision {len(cartas):3d} cartas · "
           f"{len(equipe)} consultores → {destino}")
 
