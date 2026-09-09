@@ -206,9 +206,6 @@ CSS = """
   .barra-in h1{font-size:20px;font-weight:600;letter-spacing:-.01em}
   .barra-in .sub{font-family:var(--mono);font-size:10px;letter-spacing:.22em;
     text-transform:uppercase;color:#8E9096;margin-top:3px}
-  .quando{margin-left:auto;text-align:right;font-family:var(--mono);
-    font-size:11px;letter-spacing:.1em;color:#8E9096;line-height:1.7}
-  .quando b{display:block;color:#fff;font-weight:500;letter-spacing:.06em}
 
   /* ---------- filtros ---------- */
   .filtros{background:var(--papel);border-bottom:1px solid var(--linha);
@@ -845,6 +842,8 @@ def pagina(cartas, cfg, segmentos, quando, equipe):
             .replace("__ZAP__", json.dumps(ZAP_SVG)))
 
     return f'''<!DOCTYPE html>
+<!-- gerado em {quando} — fora da vista do parceiro de propósito; serve só
+     para conferir, no código-fonte, se a publicação travou num dia antigo -->
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -866,7 +865,6 @@ def pagina(cartas, cfg, segmentos, quando, equipe):
       <h1>Cartas contempladas</h1>
       <div class="sub">Área do parceiro · Vision</div>
     </div>
-    <div class="quando">Atualizado<b>{quando}</b></div>
   </div>
 </header>
 
