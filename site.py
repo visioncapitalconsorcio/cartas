@@ -6,10 +6,14 @@ Página única com o catálogo completo de cotas disponíveis, na identidade
 da Vision. O parceiro filtra pelo que o cliente procura, abre a carta, vê o
 custo total do cliente e a própria comissão, e copia a mensagem pronta.
 
-Uso: python3 site.py                          # site geral, todas as cartas
-     python3 site.py --marca marcas/ale.json  # variante restrita (a Alê só
-                                              # pode vender Porto)
-     python3 site.py --todas                  # geral + variantes restritas
+Uso: python3 site.py
+
+Uma página só, com o catálogo inteiro. O parceiro abre a carta e escolhe ali
+mesmo com qual dos três consultores quer falar.
+
+As marcas de marcas/*.json (Cartas Alê, Cred Cris) NÃO entram aqui. Aqueles
+parceiros recebem as cartas em PNG pelo Google Drive, por outro caminho; este
+site é para os parceiros que não têm consultor fixo.
 
 Rodapé, FAQ e contatos saem de config.json — editável sem mexer aqui.
 
@@ -86,22 +90,18 @@ def dados_js(cartas):
     return json.dumps(enxuto, ensure_ascii=False, separators=(",", ":"))
 
 
-def consultor_de(cfg, marca):
+def equipe_de(cfg):
     """
-    Cada parceiro tem um consultor responsável. É ele que recebe a reserva
-    e o plantão daquela página — antes tudo caía num número só.
+    Os três consultores, na ordem do config.json. Neste site o parceiro
+    escolhe com quem falar na hora de reservar — antes tudo caía num número
+    só. Os parceiros com consultor fixo (Alê, Cred Cris) não usam o site:
+    recebem os cards em PNG pelo Drive.
     """
-    lista = cfg.get("consultores") or {}
-    chave = marca.get("consultor") or cfg.get("consultor_padrao") or ""
-    c = lista.get(chave) or {}
-    if not c and lista:
-        c = list(lista.values())[0]
-    return {"nome": c.get("nome", ""), "fone": c.get("_fone", "")}
+    return [{"nome": c.get("nome", ""), "fone": c["_fone"]}
+            for c in (cfg.get("consultores") or {}).values() if c.get("_fone")]
 
 
-def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
-    zap = consultor["fone"]
-    plantao = zap
+def pagina(cartas, cfg, segmentos, quando, equipe):
     insta = (cfg.get("instagram") or "").lstrip("@")
     faq = cfg.get("faq") or []
 
@@ -111,6 +111,13 @@ def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
     faq_html = "".join(
         f'<details><summary>{html.escape(q["p"])}</summary>'
         f'<p>{html.escape(q["r"])}</p></details>' for q in faq)
+
+    plantao_html = "".join(
+        f'<a href="https://wa.me/{p["fone"]}" target="_blank" rel="noopener">'
+        f'{html.escape(p["nome"].split()[0])}</a>' for p in equipe)
+    equipe_html = "".join(
+        f'<a href="https://wa.me/{p["fone"]}" target="_blank" rel="noopener">'
+        f'{html.escape(p["nome"])} · WhatsApp</a>' for p in equipe)
 
     return f'''<!DOCTYPE html>
 <html lang="pt-BR">
@@ -231,6 +238,18 @@ def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
     text-decoration:none;padding:12px;font-weight:500}}
   .acoes .primaria{{background:var(--s1);border-color:var(--s1);
     color:var(--void);font-weight:600}}
+  .reservar{{padding:0 22px 18px}}
+  .reservar h3{{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--s4);font-weight:500;margin-bottom:7px}}
+  .reservar p{{font-size:13.5px;color:var(--s3);margin-bottom:11px}}
+  .reservar .cons{{display:flex;flex-wrap:wrap;gap:9px}}
+  .reservar .cons a{{flex:1;min-width:150px;display:flex;flex-direction:column;
+    gap:2px;align-items:center;padding:12px 10px;border:1px solid var(--linha);
+    border-radius:9px;background:var(--sup);text-decoration:none}}
+  .reservar .cons a:hover{{border-color:var(--s1)}}
+  .reservar .cons b{{color:var(--s1);font-size:14px;font-weight:600}}
+  .reservar .cons em{{font-family:var(--mono);font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--s4);font-style:normal}}
   .regras{{margin:14px 0 2px;padding:15px 16px;background:var(--void);
     border:1px solid var(--linha);border-radius:9px}}
   .regras h3{{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
@@ -268,8 +287,9 @@ def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
     gap:14px 22px;align-items:center}}
   .plantao b{{color:var(--s1);font-weight:600}}
   .plantao div{{font-size:14px;color:var(--s3)}}
-  .plantao a{{margin-left:auto;background:var(--s1);color:var(--void);
-    padding:11px 22px;border-radius:8px;font-weight:600;text-decoration:none;
+  .plantao-zaps{{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}}
+  .plantao-zaps a{{background:var(--s1);color:var(--void);
+    padding:11px 20px;border-radius:8px;font-weight:600;text-decoration:none;
     white-space:nowrap}}
   .bloco{{display:flex;flex-direction:column;gap:6px;font-size:14px;
     color:var(--s3)}}
@@ -331,9 +351,10 @@ def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
 
   <footer>
     <div class="plantao">
-      <div><b>Plantão de dúvidas com {html.escape(consultor["nome"])}</b><br>
-        Dúvida sobre uma carta específica? Chame com o código em mãos.</div>
-      <a href="https://wa.me/{plantao}" target="_blank" rel="noopener">Falar agora</a>
+      <div><b>Plantão de dúvidas</b><br>
+        Dúvida sobre uma carta específica? Chame qualquer um dos três com o
+        código em mãos.</div>
+      <div class="plantao-zaps">{plantao_html}</div>
     </div>
     <div class="bloco">
       <h2>Vision</h2>
@@ -341,18 +362,16 @@ def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
       <div>CNPJ {html.escape(cfg.get("cnpj", ""))}</div>
     </div>
     <div class="bloco">
-      <h2>Seu consultor</h2>
-      <a href="https://wa.me/{zap}" target="_blank" rel="noopener">
-        {html.escape(consultor["nome"])} · WhatsApp</a>
-      <a href="https://instagram.com/{html.escape(insta)}" target="_blank"
-         rel="noopener">Instagram @{html.escape(insta)}</a>
+      <h2>Consultores</h2>
+      {equipe_html}
     </div>
     <div class="bloco">
       <h2>Atendimento</h2>
       <div>{html.escape(cfg.get("horario", ""))}</div>
-      {equipe}
+      <a href="https://instagram.com/{html.escape(insta)}" target="_blank"
+         rel="noopener">Instagram @{html.escape(insta)}</a>
     </div>
-    <p class="nota">{nota_marca}As cartas saem da lista ao longo do dia — a
+    <p class="nota">As cartas saem da lista ao longo do dia — a
       disponibilidade é confirmada no momento da reserva. O custo total é a
       soma da entrada com todas as parcelas restantes da cota.</p>
   </footer>
@@ -362,7 +381,7 @@ def pagina(cartas, cfg, segmentos, quando, nota_marca, consultor, equipe):
 <script>
 const CARTAS = {dados_js(cartas)};
 const ROT = {json.dumps(SEG_ROTULO, ensure_ascii=False)};
-const ZAP = "{zap}";
+const EQUIPE = {json.dumps(equipe, ensure_ascii=False)};
 const lista = document.getElementById('lista');
 const vazio = document.getElementById('vazio');
 const conta = document.getElementById('conta');
@@ -496,10 +515,16 @@ function abrir(cod) {{
     '</div>' +
     '<div class="acoes">' +
       '<button class="primaria" id="copiar">Copiar mensagem para o cliente</button>' +
-      '<a href="https://wa.me/' + ZAP + '?text=' + encodeURIComponent(
-        'Tenho interesse na carta ' + c.cod + ' — crédito R$ ' +
-        brl(c.credito) + '. Ela está disponível?') +
-        '" target="_blank" rel="noopener">Reservar com a Vision</a>' +
+    '</div>' +
+    '<div class="reservar"><h3>Reservar esta carta</h3>' +
+      '<p>Chame qualquer um dos três — todos atendem esta lista. A mensagem ' +
+      'já vai com o código da carta.</p>' +
+      '<div class="cons">' + EQUIPE.map(p =>
+        '<a href="https://wa.me/' + p.fone + '?text=' + encodeURIComponent(
+          'Tenho interesse na carta ' + c.cod + ' — crédito R$ ' +
+          brl(c.credito) + '. Ela está disponível?') +
+        '" target="_blank" rel="noopener"><b>' + p.nome +
+        '</b><em>WhatsApp</em></a>').join('') + '</div>' +
     '</div>' +
     '<div class="semelhantes"><h3>Cartas semelhantes</h3>' +
       (sem.length ? sem.map(s =>
@@ -554,33 +579,29 @@ render();
 </html>'''
 
 
-def gerar(cotas, cfg, marca, destino, quando, com_equipe=False):
-    cartas = preparar(cotas, marca)
+def gerar(cotas, cfg, destino, quando):
+    cartas = preparar(cotas, {"nome": "Vision"})
     segmentos = sorted({c["seg"] for c in cartas})
-    nota = ""
-    if marca.get("administradoras"):
-        adms = ", ".join(a.upper() for a in marca["administradoras"])
-        nota = f"Esta lista mostra apenas cartas {adms}. "
-    cons = consultor_de(cfg, marca)
-    equipe = ""
-    if com_equipe:
-        linhas = "".join(
-            f'<a href="https://wa.me/{c["_fone"]}" target="_blank" '
-            f'rel="noopener">{html.escape(c["nome"])}</a>'
-            for c in (cfg.get("consultores") or {}).values() if c.get("_fone"))
-        equipe = f'<div style="margin-top:9px">{linhas}</div>' if linhas else ""
+    equipe = equipe_de(cfg)
+    if not equipe:
+        raise SystemExit("Nenhum consultor com WhatsApp válido em config.json — "
+                         "a página sairia sem como reservar carta nenhuma.")
     os.makedirs(os.path.dirname(destino) or ".", exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
-        f.write(pagina(cartas, cfg, segmentos, quando, nota, cons, equipe))
-    print(f"{marca.get('nome', 'Vision'):24s} {len(cartas):3d} cartas · "
-          f"{cons['nome']:<18s} → {destino}")
+        f.write(pagina(cartas, cfg, segmentos, quando, equipe))
+    print(f"Vision {len(cartas):3d} cartas · "
+          f"{len(equipe)} consultores → {destino}")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cotas", nargs="?", default="cotas.json")
-    ap.add_argument("--marca")
-    ap.add_argument("--todas", action="store_true")
+    # --marca e --todas geravam uma página por parceiro. A Alê e a Cred Cris
+    # não usam o site — recebem os PNGs pelo Drive — então as páginas foram
+    # removidas. As opções continuam aceitas e ignoradas só para não quebrar
+    # o workflow que já está no ar.
+    ap.add_argument("--marca", help=argparse.SUPPRESS)
+    ap.add_argument("--todas", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--saida", default="site")
     a = ap.parse_args()
 
@@ -601,20 +622,11 @@ def main():
     cotas = json.load(open(a.cotas, encoding="utf-8"))
     quando = datetime.now().strftime("%d/%m/%Y às %Hh%M")
 
-    # página geral da casa: mostra a equipe inteira no rodapé
-    gerar(cotas, cfg, {"nome": "Vision"},
-          os.path.join(a.saida, "index.html"), quando, com_equipe=True)
-
-    # uma página por parceiro — cada uma com o consultor dela, mesmo quando
-    # não há filtro de administradora
     if a.marca or a.todas:
-        arquivos = ([a.marca] if a.marca else
-                    [os.path.join("marcas", f)
-                     for f in sorted(os.listdir("marcas")) if f.endswith(".json")])
-        for arq in arquivos:
-            m = json.load(open(arq, encoding="utf-8"))
-            gerar(cotas, cfg, m,
-                  os.path.join(a.saida, m["slug"], "index.html"), quando)
+        print("NOTA: --marca/--todas não fazem mais nada. O site é uma página\n"
+              "      só; Alê e Cred Cris recebem as cartas pelo Drive.\n")
+
+    gerar(cotas, cfg, os.path.join(a.saida, "index.html"), quando)
 
 
 if __name__ == "__main__":
